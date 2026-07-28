@@ -48,29 +48,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
-      if (firebaseUser && db) {
-        const ref = doc(db, "users", firebaseUser.uid);
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-          setProfile(snap.data() as UserProfile);
-        } else {
-          const newProfile: UserProfile = {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
-            ageTier: null,
-            createdAt: new Date().toISOString(),
-            onboardingComplete: false,
-          };
-          await setDoc(ref, newProfile);
-          setProfile(newProfile);
-        }
+  try {
+    setUser(firebaseUser);
+
+    if (firebaseUser && db) {
+      const ref = doc(db, "users", firebaseUser.uid);
+      const snap = await getDoc(ref);
+
+      if (snap.exists()) {
+        setProfile(snap.data() as UserProfile);
       } else {
-        setProfile(null);
+        const newProfile: UserProfile = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName,
+          ageTier: null,
+          createdAt: new Date().toISOString(),
+          onboardingComplete: false,
+        };
+
+        await setDoc(ref, newProfile);
+        setProfile(newProfile);
       }
-      setLoading(false);
-    });
+    } else {
+      setProfile(null);
+    }
+  } catch (error) {
+    console.error("Auth error:", error);
+    setProfile(null);
+  } finally {
+    setLoading(false);
+  }
+});
     return () => unsubscribe();
   }, []);
 
